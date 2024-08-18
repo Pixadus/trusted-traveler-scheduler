@@ -9,6 +9,7 @@ from .notification_level import NotificationLevel
 
 CONFIG_FILE_NAME = "config.json"
 LOCATION_FILE_NAME = "locations.json"
+SERVICES = ['NEXUS', 'SENTRI', 'Global Entry', 'U.S. Mexico FAST', 'U.S. Canada FAST']
 
 class Config:
     """
@@ -23,6 +24,7 @@ class Config:
         self.retrieval_interval = 300
         self.start_appointment_time = datetime(year=9999, month=12, day=31, hour=0, minute=0)
         self.end_appointment_time = datetime(year=9999, month=12, day=31, hour=23, minute=59)
+        self.appointment_type = None
        
         # Read the config file
         config = self._get_config()
@@ -145,6 +147,15 @@ class Config:
                 self.end_appointment_time = self.convert_to_datetime(self.end_appointment_time)
             except ValueError as err:
                 raise TypeError(err)
+        
+        if "appointment_type" in config:
+            self.appointment_type = config["appointment_type"]
+
+            if not isinstance(self.appointment_type, str):
+                raise TypeError("'appointment_type' must be a string")
+
+            if not self.appointment_type in SERVICES:
+                raise TypeError("'appointment_type' must be one of {}".format(SERVICES))
     
     def convert_to_seconds(self, time: str) -> int:
         """

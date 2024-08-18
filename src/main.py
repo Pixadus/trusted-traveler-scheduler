@@ -32,11 +32,12 @@ def set_up(config: Config) -> None:
 
     for location_id in config.location_ids:
         schedule_retriever = ScheduleRetriever(config)
+        appointment_type = config.appointment_type
 
         # Start each location in a separate process to run them in parallel
         process = Process(
             target=schedule_retriever.monitor_location,
-            args=(location_id,),
+            args=(location_id, appointment_type),
         )
         process.start()
 

@@ -11,8 +11,14 @@ from datetime import datetime
 
 from .config import Config
 
-GOES_URL_FORMAT = "https://ttp.cbp.dhs.gov/schedulerapi/slots?orderBy=soonest&limit=500&locationId={0}&minimum=1"
-
+GOES_URL_FORMAT = "https://ttp.cbp.dhs.gov/schedulerapi/slots?orderBy=soonest&limit=500&locationId={0}&minimum=1{1}"
+SERVICE_URLCONV = {
+    'NEXUS': '&serviceName=NEXUS', 
+    'SENTRI': '&serviceName=SENTRI', 
+    'Global Entry': '&serviceName=Global%20Entry', 
+    'U.S. Mexico FAST': '&serviceName=U.S.%20%2F%20Mexico%20FAST', 
+    'U.S. Canada FAST': '&serviceName=U.S.%20%2F%20Canada%20FAST'
+}
 
 class ScheduleRetriever:
     """
@@ -136,7 +142,7 @@ class ScheduleRetriever:
         conn.commit()
         conn.close()
 
-    def _get_schedule(self, location_id: int) -> None:
+    def _get_schedule(self, location_id: int, appointment_type) -> None:
         """
         Retrieves the schedule for the given location ID and evaluates the available appointment times. If there are
         any new appointments that meet the criteria specified in the configuration, a notification is sent.
@@ -148,8 +154,9 @@ class ScheduleRetriever:
         try:
             time.sleep(1)
             appointments = requests.get(
-                GOES_URL_FORMAT.format(location_id), timeout=30
+                GOES_URL_FORMAT.format(location_id, SERVICE_URLCONV[appointment_type]), timeout=30
             ).json()
+            print(appointments)
 
             if not appointments:
                 print(f"{datetime.today():%Y/%m/%d %H:%M:%S}: No active appointments available for location {location_id}.")
@@ -175,7 +182,7 @@ class ScheduleRetriever:
         except OSError:
             return
 
-    def monitor_location(self, location_id: int) -> None:
+    def monitor_location(self, location_id: int, appointment_type) -> None:
         """
         Monitors the given location ID for available appointment times. If the retrieval interval is set to 0, the
         schedule is retrieved once and the method returns. Otherwise, the method continuously retrieves the schedule
@@ -186,13 +193,13 @@ class ScheduleRetriever:
         :return: None
         """
         if self.config.retrieval_interval == 0:
-            self._get_schedule(location_id)
+            self._get_schedule(location_id, appointment_type)
             return
 
         while True:
             time_before = datetime.utcnow()
 
-            self._get_schedule(location_id)
+            self._get_schedule(location_id, appointment_type)
 
             # Account for the time it takes to retrieve the location when
             # deciding how long to sleep
